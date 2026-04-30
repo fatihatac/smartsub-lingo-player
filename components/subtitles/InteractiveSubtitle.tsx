@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { SubtitleCue, WordTranslation } from '../../types';
-import { useTranslation } from '../../hooks/useTranslation';
-import { useDictionary } from '../../hooks/useDictionary';
+import React, { useRef, useEffect, useCallback, useMemo } from 'react';
+import { SubtitleCue } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { SubtitleWord } from './SubtitleWord';
 import { useSubtitleStyling } from '../../hooks/useSubtitleStyling';
+import { useSubtitleInteraction } from '../../hooks/useSubtitleInteraction';
 
 interface InteractiveSubtitleProps {
   cue: SubtitleCue;
@@ -17,46 +16,30 @@ export const InteractiveSubtitle: React.FC<InteractiveSubtitleProps> = ({
   onHoverStart,
   onHoverEnd,
 }) => {
-  const { sourceLang, targetLang, subtitleSettings, showTranslation } = useAppStore();
+  const sourceLang = useAppStore((state) => state.sourceLang);
+  const targetLang = useAppStore((state) => state.targetLang);
+  const subtitleSettings = useAppStore((state) => state.subtitleSettings);
+  const showTranslation = useAppStore((state) => state.showTranslation);
+  
   const styles = useSubtitleStyling(subtitleSettings);
-  
-  const [hoveredWordIndex, setHoveredWordIndex] = useState<number | null>(null);
-  const [translation, setTranslation] = useState<WordTranslation | null>(null);
-  
-  const [fullTranslation, setFullTranslation] = useState<string | null>(null);
-  const [isTranslatingFull, setIsTranslatingFull] = useState(false);
-  
-  const { translateWord, translateSentence, loading } = useTranslation(sourceLang, targetLang);
-  const { saveWord, isSaving, savedWords } = useDictionary();
 
-  const activeWordRequestRef = useRef<number | null>(null);
+  const {
+    hoveredWordIndex,
+    translation,
+    fullTranslation,
+    isTranslatingFull,
+    loading,
+    isSaving,
+    savedWords,
+    handleWordHover,
+    clearHover,
+    handleSaveWord
+  } = useSubtitleInteraction(sourceLang, targetLang, cue.text, cue.id, showTranslation);
+
   const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const words = useMemo(() => cue.text.split(' '), [cue.text]);
-
-  const handleFullTranslation = useCallback(async () => {
-    setIsTranslatingFull(true);
-    try {
-      const result = await translateSentence(cue.text);
-      setFullTranslation(result);
-    } finally {
-      setIsTranslatingFull(false);
-    }
-  }, [cue.text, translateSentence]);
-
-  useEffect(() => {
-    setFullTranslation(null);
-    setIsTranslatingFull(false);
-    
-    setHoveredWordIndex(null);
-    setTranslation(null);
-    activeWordRequestRef.current = null;
-    
-    if (showTranslation) {
-      handleFullTranslation();
-    }
-  }, [cue.id, showTranslation, handleFullTranslation]);
 
   const cancelLeaveTimer = useCallback(() => {
     if (leaveTimeoutRef.current) {
@@ -73,14 +56,9 @@ export const InteractiveSubtitle: React.FC<InteractiveSubtitleProps> = ({
   const handleContainerLeave = useCallback(() => {
     leaveTimeoutRef.current = setTimeout(() => {
       onHoverEnd();
-      setHoveredWordIndex(null);
-      setTranslation(null);
-      activeWordRequestRef.current = null;
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      clearHover();
     }, 250);   
-  }, [onHoverEnd]);
+  }, [onHoverEnd, clearHover]);
 
   useEffect(() => {
     return () => {
@@ -101,24 +79,8 @@ export const InteractiveSubtitle: React.FC<InteractiveSubtitleProps> = ({
   const handleWordEnter = useCallback(async (wordRaw: string, index: number) => {
     cancelLeaveTimer();
     onHoverStart(); 
-    
-    setHoveredWordIndex(index);
-    setTranslation(null);
-    activeWordRequestRef.current = index; 
-    
-    const result = await translateWord(wordRaw);
-    
-    if (activeWordRequestRef.current === index) {
-      if (result) {
-        setTranslation(result);
-      }
-    }
-  }, [cancelLeaveTimer, onHoverStart, translateWord]);
-
-  // Wrap saveWord in useCallback so it's referentially stable
-  const handleSaveWord = useCallback((tw: string, trans: WordTranslation, text: string) => {
-    saveWord(tw, trans, text);
-  }, [saveWord]);
+    handleWordHover(wordRaw, index);
+  }, [cancelLeaveTimer, onHoverStart, handleWordHover]);
 
   return (
     <div 

@@ -9,6 +9,7 @@ import { useVideoPlayer } from '../../hooks/useVideoPlayer';
 import { useSmartPause } from '../../hooks/useSmartPause';
 import { usePlayerShortcuts } from '../../hooks/usePlayerShortcuts';
 import { useAppStore } from '../../store/useAppStore';
+import { useActiveSubtitle } from '../../hooks/useActiveSubtitle';
 
 interface PlayerViewProps {
   videoSrc: string;
@@ -17,17 +18,15 @@ interface PlayerViewProps {
 }
 
 export const PlayerView: React.FC<PlayerViewProps> = ({ videoSrc, videoName, onBack }) => {
-  const { 
-    subtitles, 
-    secondarySubtitles,
-    subtitleSettings, 
-    toggleTranslation,
-    setShowSettings,
-    showSettings,
-    playbackTimes,
-    savePlaybackTime,
-    clearPlaybackTime
-  } = useAppStore();
+  const subtitles = useAppStore(state => state.subtitles);
+  const secondarySubtitles = useAppStore(state => state.secondarySubtitles);
+  const subtitleSettings = useAppStore(state => state.subtitleSettings);
+  const toggleTranslation = useAppStore(state => state.toggleTranslation);
+  const setShowSettings = useAppStore(state => state.setShowSettings);
+  const showSettings = useAppStore(state => state.showSettings);
+  const playbackTimes = useAppStore(state => state.playbackTimes);
+  const savePlaybackTime = useAppStore(state => state.savePlaybackTime);
+  const clearPlaybackTime = useAppStore(state => state.clearPlaybackTime);
 
   const [showEndScreen, setShowEndScreen] = useState(false);
   const [centerAction, setCenterAction] = useState<CenterActionType | null>(null);
@@ -68,57 +67,14 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ videoSrc, videoName, onB
     }
   }, [playerState.currentTime, videoName, savePlaybackTime]);
 
-  const currentCue = useMemo(() => {
-    const time = playerState.currentTime;
-    const offset = subtitleSettings.subtitleOffset || 0;
-    
-    let found = null;
-    for (let i = subtitles.length - 1; i >= 0; i--) {
-      const cue = subtitles[i];
-      if (time >= (cue.startTime + offset) && time <= (cue.endTime + offset)) {
-        found = cue;
-        break;
-      }
-    }
-
-    if (!found && showSettings) {
-      return {
-        id: 'preview-dummy',
-        startTime: 0,
-        endTime: 9999,
-        text: 'This is a live subtitle preview.'
-      };
-    }
-    
-    return found;
-  }, [playerState.currentTime, subtitles, subtitleSettings.subtitleOffset, showSettings]);
-
-  const secondaryCue = useMemo(() => {
-    if (subtitleSettings.showSecondarySubtitle === false) return null;
-    
-    const time = playerState.currentTime;
-    const offset = subtitleSettings.subtitleOffset || 0;
-
-    let found = null;
-    for (let i = secondarySubtitles.length - 1; i >= 0; i--) {
-      const cue = secondarySubtitles[i];
-      if (time >= (cue.startTime + offset) && time <= (cue.endTime + offset)) {
-        found = cue;
-        break;
-      }
-    }
-
-    if (!found && showSettings && (secondarySubtitles.length > 0 || subtitles.length > 0)) {
-       return {
-         id: 'sec-preview-dummy',
-         startTime: 0,
-         endTime: 9999,
-         text: 'Bu bir canlı altyazı önizlemesidir.'
-       };
-    }
-
-    return found;
-  }, [playerState.currentTime, secondarySubtitles, subtitleSettings.subtitleOffset, subtitleSettings.showSecondarySubtitle, showSettings, subtitles.length]);
+  const { currentCue, secondaryCue } = useActiveSubtitle(
+    playerState.currentTime,
+    subtitles,
+    secondarySubtitles,
+    subtitleSettings.subtitleOffset || 0,
+    subtitleSettings.showSecondarySubtitle !== false,
+    showSettings
+  );
 
   const { handleSubtitleHoverStart, handleSubtitleHoverEnd } = useSmartPause(videoRef, currentCue);
 
