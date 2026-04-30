@@ -24,7 +24,7 @@ export default function App() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
-        if (text.includes('')) {
+        if (text.includes('\uFFFD')) {
           const fallbackReader = new FileReader();
           fallbackReader.onload = (e2) => resolve(e2.target?.result as string);
           fallbackReader.onerror = reject;

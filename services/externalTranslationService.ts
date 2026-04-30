@@ -57,11 +57,16 @@ export const translateWithExternalApi = async (
 
     const data = await response.json();
     
-    // The response structure is an array of arrays.
-    // data[0] contains the translation segments.
-    // data[0][0][0] is the translated text.
-    // We need to join all segments if the text was split.
-    const translatedText = data[0].map((segment: any) => segment[0]).join('');
+    type GTranslateSegment = [string, string | null, ...unknown[]];
+    type GTranslateResponse = [GTranslateSegment[], ...unknown[]];
+
+    const parsedResponse = data as GTranslateResponse;
+    if (!Array.isArray(parsedResponse[0])) {
+      throw new Error('Unexpected translation API response format');
+    }
+    const translatedText = parsedResponse[0]
+      .map((segment) => segment[0] ?? '')
+      .join('');
     
     // Cache the result
     translationCache.set(cacheKey, translatedText);

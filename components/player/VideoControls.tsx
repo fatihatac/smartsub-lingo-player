@@ -59,7 +59,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
   const handleSeekEnd = () => {
     setIsScrubbing(false);
     setScrubTime(null);
-    if (wasPlayingRef.current && !isPlaying) {
+    if (wasPlayingRef.current) {
       onTogglePlay();
     }
   };

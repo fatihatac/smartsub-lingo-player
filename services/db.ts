@@ -11,12 +11,10 @@ export const openDB = (): Promise<IDBDatabase> => {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
+      const oldVersion = event.oldVersion;
       
-      if (!db.objectStoreNames.contains(SESSIONS_STORE)) {
+      if (oldVersion < 1) {
         db.createObjectStore(SESSIONS_STORE, { keyPath: 'id', autoIncrement: true });
-      }
-
-      if (!db.objectStoreNames.contains(DICT_STORE)) {
         db.createObjectStore(DICT_STORE, { keyPath: 'id', autoIncrement: true });
       }
     };

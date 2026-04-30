@@ -59,13 +59,15 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ videoSrc, videoName, onB
     }
   }, [videoSrc, setVideoSrc]);
 
-  // Background Auto-Save Tracking
-  useEffect(() => {
-    if (Math.abs(playerState.currentTime - lastSavedTime.current) >= 3) {
-      savePlaybackTime(videoName, playerState.currentTime);
-      lastSavedTime.current = playerState.currentTime;
+  // Background Auto-Save Tracking wrapper
+  const handleTimeUpdateWrapper = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
+    handleTimeUpdate(e);
+    const current = e.currentTarget.currentTime;
+    if (Math.abs(current - lastSavedTime.current) >= 3) {
+      savePlaybackTime(videoName, current);
+      lastSavedTime.current = current;
     }
-  }, [playerState.currentTime, videoName, savePlaybackTime]);
+  }, [handleTimeUpdate, videoName, savePlaybackTime]);
 
   const { currentCue, secondaryCue } = useActiveSubtitle(
     playerState.currentTime,
@@ -160,7 +162,7 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ videoSrc, videoName, onB
             togglePlay();
           }}
           muted={playerState.isMuted}
-          onTimeUpdate={handleTimeUpdate}
+          onTimeUpdate={handleTimeUpdateWrapper}
           onDurationChange={handleDurationChange}
           onVolumeChange={handleVolumeChange}
           onPlay={handlePlay}

@@ -2,8 +2,9 @@ import { useState, useCallback } from 'react';
 import { translateWithExternalApi } from '../services/externalTranslationService';
 import { WordTranslation, WordMeaning } from '../types';
 
+const translationCache: Record<string, WordTranslation> = {};
+
 export const useTranslation = (sourceLanguage: string, targetLanguage: string) => {
-  const [cache, setCache] = useState<Record<string, WordTranslation>>({});
   const [loading, setLoading] = useState(false);
 
   const translateWord = useCallback(async (word: string): Promise<WordTranslation | null> => {
@@ -11,8 +12,8 @@ export const useTranslation = (sourceLanguage: string, targetLanguage: string) =
     if (!cleanWord) return null;
 
     const lowerWord = cleanWord.toLowerCase();
-    if (cache[lowerWord]) {
-      return cache[lowerWord];
+    if (translationCache[lowerWord]) {
+      return translationCache[lowerWord];
     }
 
     setLoading(true);
@@ -43,7 +44,7 @@ export const useTranslation = (sourceLanguage: string, targetLanguage: string) =
           meanings: results
         };
         
-        setCache(prev => ({ ...prev, [lowerWord]: result }));
+        translationCache[lowerWord] = result;
         return result;
       }
       
@@ -53,7 +54,7 @@ export const useTranslation = (sourceLanguage: string, targetLanguage: string) =
         translation: translatedText,
         ipa: ''
       };
-      setCache(prev => ({ ...prev, [lowerWord]: result }));
+      translationCache[lowerWord] = result;
       return result;
       
     } catch (error) {
@@ -62,7 +63,7 @@ export const useTranslation = (sourceLanguage: string, targetLanguage: string) =
     } finally {
       setLoading(false);
     }
-  }, [cache, sourceLanguage, targetLanguage]);
+  }, [sourceLanguage, targetLanguage]);
 
   const translateSentence = useCallback(async (text: string): Promise<string> => {
     try {
