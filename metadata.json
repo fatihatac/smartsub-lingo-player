@@ -1,0 +1,5 @@
+{
+  "name": "SmartSub Lingo Player",
+  "description": "A video player that pauses on subtitle hover to provide instant word-by-word translations using deep-translator.",
+  "requestFramePermissions": []
+}
