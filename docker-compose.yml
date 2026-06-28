@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        VITE_API_URL: ""
+        VITE_API_KEY: "${VITE_API_KEY:-your-api-key-here}"
+    ports:
+      - "3000:80"
+    depends_on:
+      - translator-api
+    restart: unless-stopped
+
+  translator-api:
+    image: "${TRANSLATOR_API_IMAGE:-translator-api:latest}"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

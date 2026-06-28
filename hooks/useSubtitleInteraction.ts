@@ -62,8 +62,9 @@ export const useSubtitleInteraction = (sourceLang: string, targetLang: string, c
   }, []);
 
   const handleSaveWord = useCallback((tw: string, trans: WordTranslation, text: string) => {
-    saveWord(tw, trans, text);
-  }, [saveWord]);
+    const contextSentence = fullTranslation ? `${text} → ${fullTranslation}` : text;
+    saveWord(tw, trans, contextSentence);
+  }, [saveWord, fullTranslation]);
 
   return {
     hoveredWordIndex,

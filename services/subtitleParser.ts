@@ -1,5 +1,8 @@
 import { SubtitleCue } from '../types';
 
+let _cueIdCounter = 0;
+const nextCueId = (): string => `cue-${++_cueIdCounter}`;
+
 /**
  * Converts a timestamp string to seconds.
  * Supports formats: HH:MM:SS,mmm (SRT) and MM:SS.mmm (VTT simplified)
@@ -37,7 +40,7 @@ export const parseSubtitles = (content: string): SubtitleCue[] => {
       // Empty line usually indicates end of a cue block
       if (currentCue && currentCue.startTime !== undefined && currentCue.endTime !== undefined) {
         cues.push({
-          id: crypto.randomUUID(),
+          id: nextCueId(),
           startTime: currentCue.startTime,
           endTime: currentCue.endTime,
           text: textBuffer.join(' '), // Combine multi-line text
@@ -58,7 +61,7 @@ export const parseSubtitles = (content: string): SubtitleCue[] => {
       // If we found a new time block but hadn't finished the previous one (rare edge case), push it
       if (currentCue && currentCue.startTime !== undefined) {
          cues.push({
-          id: crypto.randomUUID(),
+          id: nextCueId(),
           startTime: currentCue.startTime!,
           endTime: currentCue.endTime!,
           text: textBuffer.join(' '),
@@ -81,7 +84,7 @@ export const parseSubtitles = (content: string): SubtitleCue[] => {
   // Flush last cue
   if (currentCue && currentCue.startTime !== undefined && textBuffer.length > 0) {
     cues.push({
-      id: crypto.randomUUID(),
+      id: nextCueId(),
       startTime: currentCue.startTime,
       endTime: currentCue.endTime!,
       text: textBuffer.join(' '),

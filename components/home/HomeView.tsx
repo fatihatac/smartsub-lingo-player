@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { FileVideo, ArrowRight, Book } from 'lucide-react';
+import { FileVideo, ArrowRight, Book, Clock, Trash2 } from 'lucide-react';
 import { DictionaryModal } from '../dictionary/DictionaryModal';
 import { UploadForm } from './UploadForm';
 import { OfflineLibrary } from './OfflineLibrary';
+import { useToast } from '../../hooks/useToast';
+import { useAppStore } from '../../store/useAppStore';
 
 interface HomeViewProps {
-  onStart: (videoFile: File | Blob, subtitleFile: File | Blob, sourceLang: string, targetLang: string, saveToHistory?: boolean, sessionName?: string) => void;
+  onStart: (videoFile: File | Blob, subtitleFile: File | Blob, sourceLang: string, targetLang: string, saveToHistory?: boolean, sessionName?: string, secSubFile?: File | null) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({ onStart }) => {
@@ -14,12 +16,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStart }) => {
   const [secSubtitleFile, setSecSubtitleFile] = useState<File | null>(null);
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
+  const { toast, showToast } = useToast(3000);
+  const playbackTimes = useAppStore(state => state.playbackTimes);
+  const clearPlaybackTime = useAppStore(state => state.clearPlaybackTime);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -59,8 +58,8 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStart }) => {
     >
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-white px-6 py-3 rounded-full shadow-2xl font-medium animate-in fade-in slide-in-from-top-4 duration-300">
-          {toast}
+        <div role="alert" aria-live="polite" className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-white px-6 py-3 rounded-full shadow-2xl font-medium animate-in fade-in slide-in-from-top-4 duration-300">
+          {toast.message}
         </div>
       )}
 
@@ -93,6 +92,41 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStart }) => {
         {/* Right Column: Library & Dictionary Banner */}
         <div className="flex flex-col h-full gap-6">
           <OfflineLibrary onStart={onStart} />
+
+          {/* Saved Playback Positions */}
+          {Object.keys(playbackTimes).length > 0 && (
+            <div className="bg-slate-800/50 rounded-2xl border border-slate-700 overflow-hidden">
+              <div className="p-4 border-b border-slate-700 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-indigo-400" />
+                <h3 className="font-bold text-white">Saved Playback Positions</h3>
+              </div>
+              <div className="p-3 space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
+                {Object.entries(playbackTimes).map(([name, time]) => {
+                  const minutes = Math.floor(time / 60);
+                  const seconds = Math.floor(time % 60);
+                  const formatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                  return (
+                    <div 
+                      key={name}
+                      className="bg-slate-800 border border-slate-700 p-3 rounded-xl flex items-center justify-between group hover:bg-slate-700 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-white truncate text-sm">{name}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">Resume at {formatted}</p>
+                      </div>
+                      <button
+                        onClick={() => clearPlaybackTime(name)}
+                        className="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                        title="Remove saved position"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Dictionary Banner */}
           <div 

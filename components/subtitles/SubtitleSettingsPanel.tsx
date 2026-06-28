@@ -1,7 +1,9 @@
-import React from 'react';
-import { Settings, X } from 'lucide-react';
+import React, { useCallback } from 'react';
+import { Settings, X, Trash2 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SubtitleSettings } from '../../types';
+import { clearCache } from '../../services/translationService';
+import { useToast } from '../../hooks/useToast';
 
 interface SubtitleSettingsPanelProps {
   onClose: () => void;
@@ -11,6 +13,16 @@ export const SubtitleSettingsPanel: React.FC<SubtitleSettingsPanelProps> = ({
   onClose,
 }) => {
   const { subtitleSettings, updateSubtitleSettings, showSettings } = useAppStore();
+  const { toast, showToast } = useToast(3000);
+
+  const handleClearCache = useCallback(() => {
+    try {
+      clearCache();
+      showToast('Cache cleared', 'success');
+    } catch {
+      showToast('Failed to clear cache', 'error');
+    }
+  }, [showToast]);
 
   if (!showSettings) return null;
 
@@ -24,7 +36,7 @@ export const SubtitleSettingsPanel: React.FC<SubtitleSettingsPanelProps> = ({
         <h3 className="font-semibold text-white flex items-center gap-2">
           <Settings size={16} /> Appearance
         </h3>
-        <button onClick={onClose} className="hover:text-white transition-colors">
+        <button onClick={onClose} className="hover:text-white transition-colors" aria-label="Close settings">
           <X size={16} />
         </button>
       </div>
@@ -36,6 +48,10 @@ export const SubtitleSettingsPanel: React.FC<SubtitleSettingsPanelProps> = ({
           <div 
             onClick={() => updateSubtitleSettings({ showSecondarySubtitle: !subtitleSettings.showSecondarySubtitle })}
             className={`w-9 h-5 rounded-full relative cursor-pointer transition-colors ${subtitleSettings.showSecondarySubtitle !== false ? 'bg-indigo-500' : 'bg-slate-600'}`}
+            role="switch"
+            aria-checked={subtitleSettings.showSecondarySubtitle !== false}
+            aria-label="Show target subtitle"
+            tabIndex={0}
           >
             <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${subtitleSettings.showSecondarySubtitle !== false ? 'translate-x-4' : 'translate-x-0'}`} />
           </div>
@@ -51,6 +67,7 @@ export const SubtitleSettingsPanel: React.FC<SubtitleSettingsPanelProps> = ({
             value={subtitleSettings.fontSize}
             onChange={(e) => handleChange('fontSize', Number(e.target.value))}
             className="w-full h-1.5 bg-slate-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500"
+            aria-label="Font size"
           />
         </div>
 
@@ -64,6 +81,7 @@ export const SubtitleSettingsPanel: React.FC<SubtitleSettingsPanelProps> = ({
             value={subtitleSettings.verticalPosition}
             onChange={(e) => handleChange('verticalPosition', Number(e.target.value))}
             className="w-full h-1.5 bg-slate-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500"
+            aria-label="Bottom offset"
           />
         </div>
 
@@ -100,6 +118,7 @@ export const SubtitleSettingsPanel: React.FC<SubtitleSettingsPanelProps> = ({
             value={subtitleSettings.backgroundOpacity}
             onChange={(e) => handleChange('backgroundOpacity', Number(e.target.value))}
             className="w-full h-1.5 bg-slate-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500"
+            aria-label="Background opacity"
           />
         </div>
 
@@ -110,6 +129,7 @@ export const SubtitleSettingsPanel: React.FC<SubtitleSettingsPanelProps> = ({
             <button 
               onClick={() => handleChange('subtitleOffset', Math.max(-5, (subtitleSettings.subtitleOffset || 0) - 0.5))}
               className="w-8 h-8 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded text-white transition-colors"
+              aria-label="Decrease subtitle offset"
             >
               -
             </button>
@@ -119,6 +139,7 @@ export const SubtitleSettingsPanel: React.FC<SubtitleSettingsPanelProps> = ({
             <button 
               onClick={() => handleChange('subtitleOffset', Math.min(5, (subtitleSettings.subtitleOffset || 0) + 0.5))}
               className="w-8 h-8 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded text-white transition-colors"
+              aria-label="Increase subtitle offset"
             >
               +
             </button>
@@ -127,7 +148,32 @@ export const SubtitleSettingsPanel: React.FC<SubtitleSettingsPanelProps> = ({
             Negative = Earlier, Positive = Later
           </p>
         </div>
+
+        {/* Clear Translation Cache */}
+        <div className="pt-4 border-t border-slate-700">
+          <button
+            onClick={handleClearCache}
+            className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors w-full justify-center py-1.5 rounded hover:bg-red-400/10"
+            aria-label="Clear translation cache"
+          >
+            <Trash2 size={14} />
+            Clear translation cache
+          </button>
+        </div>
       </div>
+
+      {/* Toast notification */}
+      {toast && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className={`absolute -bottom-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-xl text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-300 whitespace-nowrap text-white ${
+            toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 };

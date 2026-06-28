@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback, useMemo } from 'react';
+import { Bookmark as BookmarkIcon } from 'lucide-react';
 import { SubtitleCue } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { SubtitleWord } from './SubtitleWord';
@@ -9,18 +10,47 @@ interface InteractiveSubtitleProps {
   cue: SubtitleCue;
   onHoverStart: () => void;
   onHoverEnd: () => void;
+  /** Current video playback time in seconds */
+  currentTime?: number;
+  /** When true, swaps source/target languages for reverse translation (target→source) */
+  isSecondary?: boolean;
 }
 
 export const InteractiveSubtitle: React.FC<InteractiveSubtitleProps> = ({
   cue,
   onHoverStart,
   onHoverEnd,
+  currentTime,
+  isSecondary,
 }) => {
   const sourceLang = useAppStore((state) => state.sourceLang);
   const targetLang = useAppStore((state) => state.targetLang);
   const subtitleSettings = useAppStore((state) => state.subtitleSettings);
   const showTranslation = useAppStore((state) => state.showTranslation);
+  const bookmarks = useAppStore((state) => state.bookmarks);
+  const addBookmark = useAppStore((state) => state.addBookmark);
+  const removeBookmark = useAppStore((state) => state.removeBookmark);
+
+  const isBookmarked = bookmarks.some((b) => b.cueId === cue.id);
+
+  const handleBookmarkToggle = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isBookmarked) {
+      removeBookmark(cue.id);
+    } else {
+      addBookmark({
+        cueId: cue.id,
+        cueText: cue.text,
+        timestamp: currentTime ?? cue.startTime,
+        date: Date.now(),
+      });
+    }
+  }, [isBookmarked, cue.id, cue.text, cue.startTime, currentTime, addBookmark, removeBookmark]);
   
+  // Swap languages for secondary subtitle to translate target→source
+  const effectiveSource = isSecondary ? targetLang : sourceLang;
+  const effectiveTarget = isSecondary ? sourceLang : targetLang;
+
   const styles = useSubtitleStyling(subtitleSettings);
 
   const {
@@ -34,7 +64,7 @@ export const InteractiveSubtitle: React.FC<InteractiveSubtitleProps> = ({
     handleWordHover,
     clearHover,
     handleSaveWord
-  } = useSubtitleInteraction(sourceLang, targetLang, cue.text, cue.id, showTranslation);
+  } = useSubtitleInteraction(effectiveSource, effectiveTarget, cue.text, cue.id, showTranslation);
 
   const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -85,12 +115,25 @@ export const InteractiveSubtitle: React.FC<InteractiveSubtitleProps> = ({
   return (
     <div 
       ref={containerRef}
-      className="p-5 rounded-2xl text-center max-w-4xl mx-auto shadow-2xl transition-all duration-300 pointer-events-auto cursor-text select-none border border-white/10"
+      className="relative p-5 rounded-2xl text-center max-w-4xl mx-auto shadow-2xl transition-all duration-300 pointer-events-auto cursor-text select-none border border-white/10 group/cue"
       style={styles}
       onMouseEnter={handleContainerEnter}
       onMouseLeave={handleContainerLeave}
       onTouchStart={handleContainerEnter}
     >
+      {/* Bookmark toggle — visible on hover */}
+      <button
+        onClick={handleBookmarkToggle}
+        className="absolute top-2 right-2 p-1.5 rounded-lg opacity-0 group-hover/cue:opacity-100 transition-opacity duration-200 hover:bg-white/20 z-10"
+        title={isBookmarked ? 'Remove bookmark' : 'Bookmark this cue'}
+        aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this cue'}
+        aria-pressed={isBookmarked}
+      >
+        <BookmarkIcon
+          size={18}
+          className={isBookmarked ? 'text-amber-400 fill-amber-400' : 'text-white/70'}
+        />
+      </button>
       {(fullTranslation || isTranslatingFull) && (
         <div className="mb-5 bg-black/60 backdrop-blur-xl text-white p-3.5 rounded-xl text-lg animate-in fade-in slide-in-from-bottom-2 shadow-2xl border border-white/10">
             {isTranslatingFull ? (
@@ -125,7 +168,7 @@ export const InteractiveSubtitle: React.FC<InteractiveSubtitleProps> = ({
               isHovered={isHovered}
               isSaved={isSaved}
               cleanWord={cleanWord}
-              sourceLang={sourceLang}
+              sourceLang={effectiveSource}
               translation={isHovered ? translation : null}
               loading={isHovered ? loading : false}
               isSaving={isSaving}

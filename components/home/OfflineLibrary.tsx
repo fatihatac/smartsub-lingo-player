@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, PlayCircle, Trash2 } from 'lucide-react';
+import { Clock, PlayCircle, Trash2, Loader2, Youtube } from 'lucide-react';
 import { getSessions, deleteSession } from '../../services/db';
 import { OfflineSession } from '../../types';
 
@@ -9,13 +9,17 @@ interface OfflineLibraryProps {
 
 export const OfflineLibrary: React.FC<OfflineLibraryProps> = ({ onStart }) => {
   const [recentSessions, setRecentSessions] = useState<OfflineSession[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const loadSessions = async () => {
+    setLoading(true);
     try {
       const sessions = await getSessions();
       setRecentSessions(sessions);
     } catch (e) {
       console.error("Failed to load sessions", e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,7 +41,12 @@ export const OfflineLibrary: React.FC<OfflineLibraryProps> = ({ onStart }) => {
       </h2>
       
       <div className="flex-1 bg-slate-800/50 rounded-2xl border border-slate-700 overflow-hidden flex flex-col">
-        {recentSessions.length === 0 ? (
+        {loading ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-slate-400">
+            <Loader2 className="w-8 h-8 animate-spin mb-3" />
+            <p>Loading sessions...</p>
+          </div>
+        ) : recentSessions.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-slate-500">
             <p>No recent files saved.</p>
             <p className="text-sm mt-2">Upload a video to save it here.</p>
@@ -55,7 +64,15 @@ export const OfflineLibrary: React.FC<OfflineLibraryProps> = ({ onStart }) => {
                     <PlayCircle size={24} />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-white truncate pr-2">{session.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-white truncate pr-2">{session.name}</h3>
+                      {session.source === 'youtube' && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-red-900/40 text-red-400 font-medium shrink-0">
+                          <Youtube size={12} />
+                          YouTube
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3 text-xs text-slate-400">
                       <span className="bg-slate-700 px-1.5 py-0.5 rounded">{session.sourceLang || 'English'} → {session.targetLang}</span>
                       <span>{new Date(session.date).toLocaleDateString()}</span>

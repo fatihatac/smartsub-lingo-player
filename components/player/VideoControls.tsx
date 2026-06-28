@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Volume2, VolumeX, Maximize, Settings, FastForward, Rewind } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Maximize, Settings, FastForward, Rewind, Languages, BookOpen, BarChart3, Bookmark } from 'lucide-react';
 import { VideoPlayerState } from '../../hooks/useVideoPlayer';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -13,6 +13,13 @@ interface VideoControlsProps {
   onSetPlaybackRate: (rate: number) => void;
   onToggleFullscreen: () => void;
   onShowFeedback: (type: string, text?: string) => void;
+  onOpenDictionary?: () => void;
+  onOpenStats?: () => void;
+  onToggleBookmarks?: () => void;
+  showBookmarks?: boolean;
+  bookmarkCount?: number;
+  knownCount?: number;
+  totalUniqueCount?: number;
 }
 
 export const VideoControls: React.FC<VideoControlsProps> = ({
@@ -25,6 +32,13 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
   onSetPlaybackRate,
   onToggleFullscreen,
   onShowFeedback,
+  onOpenDictionary,
+  onOpenStats,
+  onToggleBookmarks,
+  showBookmarks,
+  bookmarkCount,
+  knownCount,
+  totalUniqueCount,
 }) => {
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -32,7 +46,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
   const wasPlayingRef = useRef(false);
   
   const { isPlaying, currentTime, duration, isMuted, volume, playbackRate } = playerState;
-  const { targetLang, showSettings, toggleSettings } = useAppStore();
+  const { targetLang, showSettings, toggleSettings, showTranslation, toggleTranslation } = useAppStore();
 
   const displayTime = isScrubbing && scrubTime !== null ? scrubTime : currentTime;
 
@@ -100,6 +114,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
             onClick={(e) => { e.stopPropagation(); onSeek(Math.max(0, currentTime - 5)); onShowFeedback('rewind', '-5s'); }}
             className="hover:text-indigo-400 transition-colors p-1 rounded-lg hover:bg-white/10"
             title="Rewind 5s (Left Arrow)"
+            aria-label="Rewind 5 seconds"
           >
             <Rewind size={20} fill="currentColor" />
           </button>
@@ -108,6 +123,8 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
             onClick={(e) => { e.stopPropagation(); onTogglePlay(); onShowFeedback(isPlaying ? 'pause' : 'play'); }} 
             className="hover:text-indigo-400 transition-colors p-1 rounded-lg hover:bg-white/10 mx-[-0.5rem]"
             title={isPlaying ? "Pause (Space)" : "Play (Space)"}
+            aria-label={isPlaying ? "Pause" : "Play"}
+            aria-pressed={isPlaying}
           >
             {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
           </button>
@@ -116,6 +133,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
             onClick={(e) => { e.stopPropagation(); onSeek(Math.min(duration || 0, currentTime + 5)); onShowFeedback('forward', '+5s'); }}
             className="hover:text-indigo-400 transition-colors p-1 rounded-lg hover:bg-white/10"
             title="Forward 5s (Right Arrow)"
+            aria-label="Forward 5 seconds"
           >
             <FastForward size={20} fill="currentColor" />
           </button>
@@ -124,6 +142,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
             onClick={(e) => { e.stopPropagation(); onReplay(); onShowFeedback('play'); }} 
             className="hover:text-indigo-400 transition-colors p-1 rounded-lg hover:bg-white/10"
             title="Replay Video"
+            aria-label="Replay video"
           >
             <RotateCcw size={20} />
           </button>
@@ -134,6 +153,8 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
               onClick={(e) => { e.stopPropagation(); onToggleMute(); onShowFeedback(isMuted ? 'unmute' : 'mute', isMuted ? 'Unmuted' : 'Muted'); }} 
               className="hover:text-indigo-400 transition-colors p-1 rounded-lg hover:bg-white/10 z-10"
               title={isMuted ? "Unmute" : "Mute"}
+              aria-label={isMuted ? "Unmute audio" : "Mute audio"}
+              aria-pressed={isMuted}
             >
                {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
             </button>
@@ -141,15 +162,16 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
             {/* Volume Slider (Reveals on hover) */}
             <div className="w-0 overflow-hidden group-hover/vol:w-24 transition-all duration-300 ease-out flex items-center">
                <div className="w-20 h-1.5 bg-white/20 rounded-full relative ml-2 cursor-pointer">
-                 <input
-                   type="range"
-                   min="0"
-                   max="1"
-                   step="0.05"
-                   value={isMuted ? 0 : volume}
-                   onChange={(e) => onSetVolume(parseFloat(e.target.value))}
-                   className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
-                 />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={isMuted ? 0 : volume}
+                    onChange={(e) => onSetVolume(parseFloat(e.target.value))}
+                    className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
+                    aria-label="Volume"
+                  />
                  <div 
                    className="absolute left-0 top-0 bottom-0 bg-white rounded-full"
                    style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
@@ -166,13 +188,14 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
         <div className="text-white flex items-center gap-3">
            {/* Playback Speed Control */}
            <div className="relative">
-             <button 
-               onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-               className="text-xs font-bold bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-1.5 rounded-lg text-slate-200 hover:text-white transition-all min-w-[3.5rem]"
-               title="Playback Speed"
-             >
-               {playbackRate}x
-             </button>
+              <button 
+                onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                className="text-xs font-bold bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-1.5 rounded-lg text-slate-200 hover:text-white transition-all min-w-[3.5rem]"
+                title="Playback Speed"
+                aria-expanded={showSpeedMenu}
+              >
+                {playbackRate}x
+              </button>
              
              {showSpeedMenu && (
                <>
@@ -204,12 +227,14 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
            <div className="h-6 w-px bg-white/10 mx-1"></div>
 
            <button 
-             onClick={toggleSettings} 
-             className={`hover:text-indigo-400 transition-colors p-1.5 rounded-lg hover:bg-white/10 ${showSettings ? 'text-indigo-400 bg-white/10' : ''}`}
-             title="Subtitle Settings"
-           >
-             <Settings size={20} />
-           </button>
+              onClick={toggleSettings} 
+              className={`hover:text-indigo-400 transition-colors p-1.5 rounded-lg hover:bg-white/10 ${showSettings ? 'text-indigo-400 bg-white/10' : ''}`}
+              title="Subtitle Settings"
+              aria-label="Subtitle settings"
+              aria-expanded={showSettings}
+            >
+              <Settings size={20} />
+            </button>
            
            <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/5 border border-white/5">
              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
@@ -217,13 +242,66 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
              </span>
            </div>
 
-           <button 
-             onClick={onToggleFullscreen} 
-             className="hover:text-indigo-400 transition-colors p-1.5 rounded-lg hover:bg-white/10"
-             title="Fullscreen"
+           <button
+             onClick={(e) => { e.stopPropagation(); toggleTranslation(); }}
+             className={`hover:text-indigo-400 transition-colors p-1.5 rounded-lg hover:bg-white/10 ${showTranslation ? 'text-indigo-400 bg-white/10' : ''}`}
+             title="Toggle Translation"
+             aria-label="Toggle translation"
+             aria-pressed={showTranslation}
            >
-             <Maximize size={20} />
+             <Languages size={20} />
            </button>
+
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenDictionary?.(); }}
+              className="hover:text-indigo-400 transition-colors p-1.5 rounded-lg hover:bg-white/10"
+              title="Open Dictionary"
+              aria-label="Open dictionary"
+            >
+              <BookOpen size={20} />
+            </button>
+
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); onOpenStats?.(); }}
+                className="hover:text-indigo-400 transition-colors p-1.5 rounded-lg hover:bg-white/10"
+                title="Word Frequency Stats"
+                aria-label="Open word frequency stats"
+              >
+                <BarChart3 size={20} />
+              </button>
+              {(knownCount != null && totalUniqueCount != null && totalUniqueCount > 0) && (
+                <span className="absolute -top-1.5 -right-1.5 bg-slate-800 border border-slate-600 text-[9px] font-bold text-slate-200 px-1 py-0.5 rounded-full leading-none whitespace-nowrap pointer-events-none">
+                  {knownCount}/{totalUniqueCount}
+                </span>
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleBookmarks?.(); }}
+                className={`hover:text-indigo-400 transition-colors p-1.5 rounded-lg hover:bg-white/10 ${showBookmarks ? 'text-amber-400 bg-white/10' : ''}`}
+                title="Bookmarks"
+                aria-label="Toggle bookmarks"
+                aria-pressed={showBookmarks}
+              >
+                <Bookmark size={20} />
+              </button>
+              {(bookmarkCount != null && bookmarkCount > 0) && (
+                <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-[9px] font-bold text-white px-1 py-0.5 rounded-full leading-none whitespace-nowrap pointer-events-none">
+                  {bookmarkCount}
+                </span>
+              )}
+            </div>
+
+           <button 
+              onClick={onToggleFullscreen} 
+              className="hover:text-indigo-400 transition-colors p-1.5 rounded-lg hover:bg-white/10"
+              title="Fullscreen"
+              aria-label="Toggle fullscreen"
+            >
+              <Maximize size={20} />
+            </button>
         </div>
       </div>
     </div>

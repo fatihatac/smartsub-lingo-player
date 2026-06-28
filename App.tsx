@@ -45,9 +45,8 @@ export default function App() {
     tLang: string, 
     shouldSave: boolean = false, 
     name: string = "Video",
-    secSubtitleFile?: File | Blob | null
+    secSubtitleFile?: File | Blob | null,
   ) => {
-    // Create Video URL
     const vidUrl = URL.createObjectURL(videoFile);
     setGlobalVideoSrc(vidUrl);
     setVideoName(name);

@@ -38,7 +38,13 @@ export const CenterPulseFeedback: React.FC<CenterPulseFeedbackProps> = ({ action
           {action.type === 'vol-down' && <Volume1 size={48} />}
           {action.type === 'mute' && <VolumeX size={48} />}
           {action.type === 'unmute' && <Volume2 size={48} />}
-          {action.text && <span className="text-xl font-bold tracking-widest">{action.text}</span>}
+          {action.type === 'smart-pause' && (
+            <>
+              <Pause size={48} fill="currentColor" />
+              <span className="text-xs font-semibold tracking-widest uppercase opacity-80">PAUSED</span>
+            </>
+          )}
+          {action.type !== 'smart-pause' && action.text && <span className="text-xl font-bold tracking-widest">{action.text}</span>}
         </div>
       </div>
     </>

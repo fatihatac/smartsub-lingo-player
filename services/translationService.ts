@@ -74,6 +74,34 @@ function parseWordTranslation(response: unknown): WordTranslation | null {
 }
 
 // ---------------------------------------------------------------------------
+// Language name → ISO-639-1 code mapping
+// Store keeps display names ("English", "Turkish"); the backend expects codes.
+// ---------------------------------------------------------------------------
+
+const LANG_NAME_TO_CODE: Record<string, string> = {
+  english: "en",
+  turkish: "tr",
+  spanish: "es",
+  german: "de",
+  french: "fr",
+  japanese: "ja",
+  korean: "ko",
+  italian: "it",
+  portuguese: "pt",
+  russian: "ru",
+  chinese: "zh",
+  arabic: "ar",
+  dutch: "nl",
+  polish: "pl",
+};
+
+function toLangCode(nameOrCode: string): string {
+  // Already a 2-letter code → return as-is
+  if (nameOrCode.length === 2) return nameOrCode.toLowerCase();
+  return LANG_NAME_TO_CODE[nameOrCode.toLowerCase()] ?? nameOrCode.toLowerCase();
+}
+
+// ---------------------------------------------------------------------------
 // Text cleaning — strip sound effects, stage directions, and disallowed chars
 // Backend WordStr pattern: ^[a-zA-ZçğıöşüÇĞİÖŞÜ0-9\- ']+$
 // ---------------------------------------------------------------------------
@@ -174,8 +202,8 @@ export async function translateSentence(
   try {
     const response = await apiPost("/api/v1/translate/sentence", {
       text: cleaned,
-      source_lang: sourceLang,
-      target_lang: targetLang,
+      source_lang: toLangCode(sourceLang),
+      target_lang: toLangCode(targetLang),
     }, { signal }) as SentenceTranslateApiResponse;
 
     return response?.translated_text ?? "";

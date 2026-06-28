@@ -1,8 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Volume2, Plus, Check } from 'lucide-react';
 import { WordTranslation } from '../../types';
-import { getLanguageCode } from '../../services/externalTranslationService';
-
 interface WordTooltipProps {
   translation: WordTranslation | null;
   loading: boolean;
@@ -26,12 +24,18 @@ export const WordTooltip: React.FC<WordTooltipProps> = ({
   onMouseEnter,
   onMouseLeave
 }) => {
+  const [showAllMeanings, setShowAllMeanings] = useState(false);
+
+  const hasMultipleCategories = translation?.meanings
+    ? new Set(translation.meanings.map(m => m.category)).size > 1
+    : false;
+
   const handlePlayAudio = (e: React.MouseEvent, text: string) => {
     e.stopPropagation();
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = getLanguageCode(sourceLang);
+      utterance.lang = sourceLang.slice(0,2).toLowerCase();
       utterance.rate = 0.9;
       window.speechSynthesis.speak(utterance);
     }
@@ -93,8 +97,8 @@ export const WordTooltip: React.FC<WordTooltipProps> = ({
             {translation?.meanings && translation.meanings.length > 0 && (
               <div className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 items-baseline mt-1 w-full text-left">
                 {translation.meanings
-                  .filter(m => m.category === 'Common Usage' || m.category === 'General')
-                  .slice(0, 4)
+                  .filter(m => showAllMeanings || m.category === 'Common Usage' || m.category === 'General')
+                  .slice(0, showAllMeanings ? undefined : 4)
                   .map((m, i) => (
                     <React.Fragment key={i}>
                       <div className="text-[13px] md:text-[14px] text-[#9AA0A6] leading-snug select-text break-words">
@@ -106,6 +110,19 @@ export const WordTooltip: React.FC<WordTooltipProps> = ({
                     </React.Fragment>
                   ))}
               </div>
+            )}
+
+            {/* Show All Meanings Toggle */}
+            {hasMultipleCategories && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAllMeanings(prev => !prev);
+                }}
+                className="text-xs text-indigo-400 hover:underline cursor-pointer mt-0.5 text-left w-fit"
+              >
+                {showAllMeanings ? 'Show less' : 'Show all meanings'}
+              </button>
             )}
             
             {/* IPA Fallback */}

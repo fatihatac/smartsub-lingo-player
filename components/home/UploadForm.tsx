@@ -21,7 +21,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
   secSubtitleFile,
   onSetVideoFile, 
   onSetSubtitleFile,
-  onSetSecSubtitleFile
+  onSetSecSubtitleFile,
 }) => {
   const [sourceLang, setSourceLang] = useState('English');
   const [targetLang, setTargetLang] = useState('Turkish');
@@ -99,6 +99,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
               accept="video/*" 
               onChange={(e) => handleFileChange(e, 'video')} 
               className="absolute inset-0 opacity-0 cursor-pointer" 
+              aria-label="Select video file"
             />
           </div>
         </div>
@@ -119,6 +120,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
                 accept=".srt,.vtt" 
                 onChange={(e) => handleFileChange(e, 'subtitle')} 
                 className="absolute inset-0 opacity-0 cursor-pointer" 
+                aria-label="Select primary subtitle file"
                 />
             </div>
             </div>
@@ -142,6 +144,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
                     }
                 }} 
                 className="absolute inset-0 opacity-0 cursor-pointer" 
+                aria-label="Select target subtitle file"
                 />
             </div>
             </div>
@@ -184,7 +187,10 @@ export const UploadForm: React.FC<UploadFormProps> = ({
         </div>
 
         <button
-          onClick={() => isReady && onStart(videoFile!, subtitleFile!, sourceLang, targetLang, true, videoFile!.name, secSubtitleFile)}
+          onClick={() => {
+            if (!isReady) return;
+            onStart(videoFile!, subtitleFile!, sourceLang, targetLang, true, videoFile!.name, secSubtitleFile);
+          }}
           disabled={!isReady}
           className={`w-full py-3.5 rounded-xl font-bold text-lg flex items-center justify-center space-x-2 transition-all ${
             isReady 

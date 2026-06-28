@@ -1,9 +1,14 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { SubtitleCue } from '../types';
 
+interface UseSmartPauseOptions {
+  onSmartPause?: () => void;
+}
+
 export const useSmartPause = (
   videoRef: React.RefObject<HTMLVideoElement | null>,
-  currentCue: SubtitleCue | null
+  currentCue: SubtitleCue | null,
+  options?: UseSmartPauseOptions
 ) => {
   const isHoverPausedRef = useRef(false);
   const wasPlayingBeforeHoverRef = useRef(false);
@@ -41,6 +46,7 @@ export const useSmartPause = (
         isOurInteractionRef.current = true;
         videoRef.current.pause();
         isHoverPausedRef.current = true;
+        options?.onSmartPause?.();
         setTimeout(() => { isOurInteractionRef.current = false; }, 50);
       }
     }

@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { SubtitleSettings } from '../types';
+import { SubtitleSettings, Bookmark } from '../types';
 
 export interface SettingsSlice {
   sourceLang: string;
@@ -18,6 +18,9 @@ export interface SettingsSlice {
   savePlaybackTime: (name: string, time: number) => void;
   clearPlaybackTime: (name: string) => void;
   toggleSecondarySubtitle: () => void;
+  bookmarks: Bookmark[];
+  addBookmark: (bookmark: Bookmark) => void;
+  removeBookmark: (cueId: string) => void;
 }
 
 const DEFAULT_SETTINGS: SubtitleSettings = {
@@ -59,5 +62,15 @@ export const createSettingsSlice: StateCreator<SettingsSlice> = (set) => ({
       ...state.subtitleSettings,
       showSecondarySubtitle: !state.subtitleSettings.showSecondarySubtitle
     }
+  })),
+  bookmarks: [],
+  addBookmark: (bookmark) => set((state) => {
+    // Avoid duplicate cueId entries
+    const exists = state.bookmarks.some((b) => b.cueId === bookmark.cueId);
+    if (exists) return state;
+    return { bookmarks: [bookmark, ...state.bookmarks] };
+  }),
+  removeBookmark: (cueId) => set((state) => ({
+    bookmarks: state.bookmarks.filter((b) => b.cueId !== cueId),
   })),
 });

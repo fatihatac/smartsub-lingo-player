@@ -1,82 +1,75 @@
-import { useState, useCallback } from 'react';
-import { translateWithExternalApi } from '../services/externalTranslationService';
-import { WordTranslation, WordMeaning } from '../types';
-
-const translationCache: Record<string, WordTranslation> = {};
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { translateWord as translateWordService, translateSentence as translateSentenceService } from '../services/translationService';
+import { WordTranslation } from '../types';
 
 export const useTranslation = (sourceLanguage: string, targetLanguage: string) => {
   const [loading, setLoading] = useState(false);
+  const [sentenceLoading, setSentenceLoading] = useState(false);
+  const wordAbortRef = useRef<AbortController | null>(null);
+  const sentenceAbortRef = useRef<AbortController | null>(null);
+
+  // Abort any in-flight requests on unmount
+  useEffect(() => {
+    return () => {
+      wordAbortRef.current?.abort();
+      sentenceAbortRef.current?.abort();
+    };
+  }, []);
 
   const translateWord = useCallback(async (word: string): Promise<WordTranslation | null> => {
     const cleanWord = word.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
     if (!cleanWord) return null;
 
-    const lowerWord = cleanWord.toLowerCase();
-    if (translationCache[lowerWord]) {
-      return translationCache[lowerWord];
-    }
+    // Abort previous in-flight word request
+    wordAbortRef.current?.abort();
+    const controller = new AbortController();
+    wordAbortRef.current = controller;
 
     setLoading(true);
     try {
-      // Try local API first
-      let localData = null;
-      try {
-        const response = await fetch(`http://127.0.0.1:8000/api/translate/${encodeURIComponent(cleanWord)}`);
-        if (response.ok) {
-          localData = await response.json();
-        }
-      } catch (localError) {
-        // Silently ignore local API errors (like CORS or server down) to fallback to external API
-        console.error("Local API error", localError);
-        console.warn("Local API not available, falling back to external API.");
-      }
-      
-      if (localData && localData.data && localData.data.results && localData.data.results.length > 0) {
-        const results: WordMeaning[] = localData.data.results;
-        
-        // Filter for Common Usage first, otherwise take the first available
-        const commonUsages = results.filter(r => r.category === 'Common Usage');
-        const primaryMeaning = commonUsages.length > 0 ? commonUsages[0].meaning : results[0].meaning;
-        
-        const result: WordTranslation = {
-          translation: primaryMeaning,
-          ipa: '', // Local API doesn't seem to provide IPA in the example
-          meanings: results
-        };
-        
-        translationCache[lowerWord] = result;
-        return result;
-      }
-      
-      // Fallback to external API if local fails or returns no results
-      const translatedText = await translateWithExternalApi(cleanWord, sourceLanguage, targetLanguage);
-      const result: WordTranslation = {
-        translation: translatedText,
-        ipa: ''
-      };
-      translationCache[lowerWord] = result;
+      const result = await translateWordService(cleanWord, sourceLanguage, targetLanguage, controller.signal);
       return result;
-      
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return null;
+      }
       console.error("Word translation failed", error);
-      return { translation: "Error", ipa: "" };
+      return null;
     } finally {
-      setLoading(false);
+      // Only clear loading if this is still the active controller
+      if (wordAbortRef.current === controller) {
+        setLoading(false);
+      }
     }
   }, [sourceLanguage, targetLanguage]);
 
   const translateSentence = useCallback(async (text: string): Promise<string> => {
+    // Abort previous in-flight sentence request
+    sentenceAbortRef.current?.abort();
+    const controller = new AbortController();
+    sentenceAbortRef.current = controller;
+
+    setSentenceLoading(true);
     try {
-      return await translateWithExternalApi(text, sourceLanguage, targetLanguage);
+      const result = await translateSentenceService(text, sourceLanguage, targetLanguage, controller.signal);
+      return result;
     } catch (error) {
-      console.error("Full translation failed", error);
-      return "Translation failed.";
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return text;
+      }
+      console.error("Sentence translation failed", error);
+      return text;
+    } finally {
+      if (sentenceAbortRef.current === controller) {
+        setSentenceLoading(false);
+      }
     }
   }, [sourceLanguage, targetLanguage]);
 
   return {
     translateWord,
     translateSentence,
-    loading
+    loading,
+    sentenceLoading
   };
 };

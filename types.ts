@@ -51,6 +51,14 @@ export interface OfflineSession {
   sourceLang: string;
   targetLang: string;
   date: number;
+  source?: 'file' | 'youtube';
+}
+
+export interface Bookmark {
+  cueId: string;
+  cueText: string;
+  timestamp: number; // video currentTime in seconds
+  date: number; // Date.now()
 }
 
 export interface SavedWord {
@@ -60,4 +68,17 @@ export interface SavedWord {
   ipa: string;
   contextSentence: string;
   date: number;
+  // Language pair
+  sourceLang?: string | null;
+  targetLang?: string | null;
+  // FSRS scheduling fields
+  stability?: number;
+  difficulty?: number;
+  state?: number; // 0=New, 1=Learning, 2=Review, 3=Relearning
+  reps?: number;
+  lapses?: number;
+  scheduled_days?: number;
+  learning_steps?: number;
+  due?: number | null;
+  last_review?: number | null;
 }

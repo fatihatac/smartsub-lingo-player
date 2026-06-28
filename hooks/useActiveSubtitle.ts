@@ -32,7 +32,7 @@ export const useActiveSubtitle = (
       }
     }
 
-    if (!found && showSettings) {
+    if (!found && showSettings && subtitles.length === 0) {
       return {
         id: 'preview-dummy',
         startTime: 0,
@@ -69,14 +69,14 @@ export const useActiveSubtitle = (
       }
     }
 
-    if (!found && showSettings && (secondarySubtitles.length > 0 || subtitles.length > 0)) {
+    if (!found && showSettings && secondarySubtitles.length === 0 && subtitles.length === 0) {
        return {
          id: 'sec-preview-dummy',
          startTime: 0,
          endTime: 9999,
          text: 'Bu bir canlı altyazı önizlemesidir.'
        };
-    }
+     }
 
     return found;
   }, [currentTime, secondarySubtitles, offset, showSecondary, showSettings, subtitles.length]);

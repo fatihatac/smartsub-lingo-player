@@ -17,6 +17,7 @@ export const useAppStore = create<AppSlice & SettingsSlice>()(
         subtitleSettings: state.subtitleSettings,
         showTranslation: state.showTranslation,
         playbackTimes: state.playbackTimes,
+        bookmarks: state.bookmarks,
       }),
     }
   )
